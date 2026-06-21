@@ -1,0 +1,17 @@
+
+[2026-06-21T18:32:06.176Z] ========================================
+[2026-06-21T18:32:06.179Z] App starting...
+[2026-06-21T18:32:06.180Z] app.name: quality-measurement
+[2026-06-21T18:32:06.181Z] app.version: 1.0.0
+[2026-06-21T18:32:06.181Z] app.getPath(userData): C:\Users\Administrator\AppData\Roaming\quality-measurement
+[2026-06-21T18:32:06.182Z] process.resourcesPath: D:\trae-bz\TraeProjects\10076\release-final\win-unpacked\resources
+[2026-06-21T18:32:06.183Z] ========================================
+[2026-06-21T18:32:06.184Z] Creating main window...
+[2026-06-21T18:32:06.184Z] process.type: browser
+[2026-06-21T18:32:06.185Z] __dirname: D:\trae-bz\TraeProjects\10076\release-final\win-unpacked\resources\app.asar\electron
+[2026-06-21T18:32:06.186Z] app.isPackaged: true
+[2026-06-21T18:32:06.238Z] isDev: false
+[2026-06-21T18:32:06.239Z] Loading dist file: D:\trae-bz\TraeProjects\10076\release-final\win-unpacked\resources\app.asar\dist\index.html
+[2026-06-21T18:32:06.240Z] dist exists: true
+[2026-06-21T18:32:06.673Z] Page finished loading
+[2026-06-21T18:32:06.687Z] Window shown
