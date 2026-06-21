@@ -80,6 +80,16 @@ export const dataService = {
     id: string,
     updates: Partial<MeasurementPoint>
   ): Promise<void> {
+    if (updates.measuredValue !== undefined) {
+      const point = await db.measurementPoints.get(id);
+      if (point) {
+        const deviation = Math.round((updates.measuredValue - point.designValue) * 100) / 100;
+        const isAbnormal =
+          deviation > point.allowablePositiveDeviation ||
+          deviation < -point.allowableNegativeDeviation;
+        updates = { ...updates, deviation, isAbnormal };
+      }
+    }
     await db.measurementPoints.update(id, {
       ...updates,
       updatedAt: new Date().toISOString(),
@@ -339,7 +349,7 @@ export const importService = {
       importedBy,
     };
 
-    return db.importBatches.add(batch);
+    return db.importBatches.add(batch) as Promise<string>;
   },
 
   async getBatches(): Promise<ImportBatch[]> {

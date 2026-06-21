@@ -29,6 +29,7 @@ import {
 import { useDataStore, useImportStore, useFilterStore } from '../../store';
 import type { MeasurementPoint } from '../../types';
 import { formatDate, formatDeviation, getStatusText } from '../../utils';
+import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -54,7 +55,7 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
   const { approvePoint, createRetestTask, updatePoint, deletePoint } =
     useDataStore();
 
-  const { selectedKeys, statusFilter, abnormalFilter, searchText } =
+  const { selectedKeys, statusFilter, abnormalFilter, searchText, treeFilter } =
     useFilterStore();
 
   const [retestModalOpen, setRetestModalOpen] = useState(false);
@@ -66,6 +67,21 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
 
   const displayPoints = useMemo(() => {
     let points = showOnlyProcessed ? processedPoints : useDataStore.getState().points;
+
+    if (treeFilter) {
+      if (treeFilter.buildingId) {
+        points = points.filter((p) => p.buildingId === treeFilter.buildingId);
+      }
+      if (treeFilter.floorId) {
+        points = points.filter((p) => p.floorId === treeFilter.floorId);
+      }
+      if (treeFilter.roomId) {
+        points = points.filter((p) => p.roomId === treeFilter.roomId);
+      }
+      if (treeFilter.inspectionItemId) {
+        points = points.filter((p) => p.inspectionItemId === treeFilter.inspectionItemId);
+      }
+    }
 
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
@@ -94,7 +110,7 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
     }
 
     return points;
-  }, [showOnlyProcessed, processedPoints, searchText, statusFilter, abnormalFilter]);
+  }, [showOnlyProcessed, processedPoints, searchText, statusFilter, abnormalFilter, treeFilter]);
 
   const handleApprove = async (point: MeasurementPoint) => {
     await approvePoint(point.id);
@@ -129,7 +145,7 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
     form.setFieldsValue({
       measuredValue: point.measuredValue,
       checker: point.checker,
-      checkDate: point.checkDate,
+      checkDate: point.checkDate ? dayjs(point.checkDate) : undefined,
       remark: point.remark,
     });
     setEditModalOpen(true);
@@ -138,18 +154,22 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
   const handleSubmitEdit = async (values: {
     measuredValue: number;
     checker: string;
-    checkDate: string;
+    checkDate: dayjs.Dayjs;
     remark: string;
   }) => {
     if (!selectedPoint) return;
 
-    const deviation = values.measuredValue - selectedPoint.designValue;
+    const measuredValue = Number(values.measuredValue);
+    const deviation = Math.round((measuredValue - selectedPoint.designValue) * 100) / 100;
     const isAbnormal =
       deviation > selectedPoint.allowablePositiveDeviation ||
       deviation < -selectedPoint.allowableNegativeDeviation;
 
     await updatePoint(selectedPoint.id, {
-      ...values,
+      measuredValue,
+      checker: values.checker,
+      checkDate: values.checkDate ? values.checkDate.format('YYYY-MM-DD') : '',
+      remark: values.remark,
       deviation,
       isAbnormal,
     });
@@ -169,8 +189,8 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
       message.warning('没有可导入的数据');
       return;
     }
-    await importData('导入数据', processedPoints.length * 100);
-    if (importResult?.success) {
+    const success = await importData('导入数据', processedPoints.length * 100);
+    if (success) {
       onImportComplete?.();
     }
   };

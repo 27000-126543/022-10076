@@ -16,6 +16,7 @@ interface FileUploadAreaProps {
 const FileUploadArea: React.FC<FileUploadAreaProps> = ({ onFileParsed }) => {
   const setPreviewData = useImportStore((state) => state.setPreviewData);
   const setColumnMapping = useImportStore((state) => state.setColumnMapping);
+  const setFileName = useImportStore((state) => state.setFileName);
   const resetImport = useImportStore((state) => state.resetImport);
 
   const handleFile = useCallback(
@@ -41,6 +42,7 @@ const FileUploadArea: React.FC<FileUploadAreaProps> = ({ onFileParsed }) => {
         }
 
         const mapping = autoDetectColumnMapping(result.headers);
+        setFileName(file.name || '未知文件');
         setPreviewData(result.headers, result.rows);
         setColumnMapping(mapping);
 

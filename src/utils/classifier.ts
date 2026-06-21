@@ -214,14 +214,10 @@ export const markDuplicates = (points: MeasurementPoint[]): MeasurementPoint[] =
     pointNumberMap.set(point.pointNumber, count + 1);
   });
 
-  const seenPoints = new Set<string>();
   return points.map((point) => {
     const count = pointNumberMap.get(point.pointNumber) || 1;
     if (count > 1) {
-      if (seenPoints.has(point.pointNumber)) {
-        return { ...point, isDuplicate: true };
-      }
-      seenPoints.add(point.pointNumber);
+      return { ...point, isDuplicate: true };
     }
     return point;
   });

@@ -191,6 +191,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 interface ImportState {
   isImporting: boolean;
   importProgress: number;
+  fileName: string;
   previewData: RawImportRow[];
   headers: string[];
   columnMapping: ColumnMapping;
@@ -204,21 +205,27 @@ interface ImportState {
     missingPhotoCount: number;
     duplicateCount: number;
   } | null;
+  setFileName: (name: string) => void;
   setPreviewData: (headers: string[], rows: RawImportRow[]) => void;
   setColumnMapping: (mapping: ColumnMapping) => void;
   processData: () => void;
-  importData: (fileName: string, fileSize: number) => Promise<void>;
+  importData: (fileName: string, fileSize: number) => Promise<boolean>;
   resetImport: () => void;
 }
 
 export const useImportStore = create<ImportState>((set, get) => ({
   isImporting: false,
   importProgress: 0,
+  fileName: '',
   previewData: [],
   headers: [],
   columnMapping: {},
   processedPoints: [],
   importResult: null,
+
+  setFileName: (name: string) => {
+    set({ fileName: name });
+  },
 
   setPreviewData: (headers: string[], rows: RawImportRow[]) => {
     set({
@@ -248,6 +255,27 @@ export const useImportStore = create<ImportState>((set, get) => ({
   },
 
   importData: async (fileName: string, fileSize: number) => {
+    if (get().isImporting) {
+      return false;
+    }
+
+    const existingBatches = useDataStore.getState().importBatches;
+    const effectiveFileName = get().fileName || fileName;
+    if (existingBatches.some((b) => b.fileName === effectiveFileName)) {
+      set({
+        importResult: {
+          success: false,
+          message: `文件"${effectiveFileName}"已导入过，请勿重复导入`,
+          totalCount: 0,
+          validCount: 0,
+          abnormalCount: 0,
+          missingPhotoCount: 0,
+          duplicateCount: 0,
+        },
+      });
+      return false;
+    }
+
     set({ isImporting: true, importProgress: 0 });
     try {
       const { processedPoints } = get();
@@ -256,7 +284,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
       set({ importProgress: 30 });
 
       const batchId = await importService.createBatch(
-        fileName,
+        effectiveFileName,
         fileSize,
         totalCount,
         processedPoints
@@ -288,6 +316,10 @@ export const useImportStore = create<ImportState>((set, get) => ({
           duplicateCount,
         },
       });
+
+      await useDataStore.getState().fetchAllData();
+
+      return true;
     } catch (error) {
       set({
         importResult: {
@@ -300,6 +332,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
           duplicateCount: 0,
         },
       });
+      return false;
     } finally {
       set({ isImporting: false });
     }
@@ -309,6 +342,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
     set({
       isImporting: false,
       importProgress: 0,
+      fileName: '',
       previewData: [],
       headers: [],
       columnMapping: {},
@@ -380,15 +414,24 @@ export const useReportStore = create<ReportState>((set, get) => ({
   },
 }));
 
+export interface TreeFilter {
+  buildingId?: string;
+  floorId?: string;
+  roomId?: string;
+  inspectionItemId?: string;
+}
+
 interface FilterState {
   selectedKeys: string[];
   statusFilter: PointStatusFilter;
   abnormalFilter: AbnormalFilter;
   searchText: string;
+  treeFilter: TreeFilter | null;
   setSelectedKeys: (keys: string[]) => void;
   setStatusFilter: (filter: PointStatusFilter) => void;
   setAbnormalFilter: (filter: AbnormalFilter) => void;
   setSearchText: (text: string) => void;
+  setTreeFilter: (filter: TreeFilter | null) => void;
   resetFilters: () => void;
 }
 
@@ -397,16 +440,19 @@ export const useFilterStore = create<FilterState>((set) => ({
   statusFilter: 'all',
   abnormalFilter: 'all',
   searchText: '',
+  treeFilter: null,
 
   setSelectedKeys: (keys: string[]) => set({ selectedKeys: keys }),
   setStatusFilter: (filter: PointStatusFilter) => set({ statusFilter: filter }),
   setAbnormalFilter: (filter: AbnormalFilter) => set({ abnormalFilter: filter }),
   setSearchText: (text: string) => set({ searchText: text }),
+  setTreeFilter: (filter: TreeFilter | null) => set({ treeFilter: filter }),
   resetFilters: () =>
     set({
       selectedKeys: [],
       statusFilter: 'all',
       abnormalFilter: 'all',
       searchText: '',
+      treeFilter: null,
     }),
 }));

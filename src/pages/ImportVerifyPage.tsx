@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Typography,
   Space,
@@ -38,6 +38,63 @@ const { Title, Text } = Typography;
 const { Search: SearchInput } = Input;
 const { Option } = Select;
 
+const parseTreeFilter = (
+  selectedKeys: string[],
+  treeData: TreeNode[]
+): { buildingId?: string; floorId?: string; roomId?: string; inspectionItemId?: string } | null => {
+  if (selectedKeys.length === 0) return null;
+  const selectedKey = selectedKeys[0];
+
+  const findNode = (
+    nodes: TreeNode[],
+    key: string,
+    parentKeys: string[] = []
+  ): { node: TreeNode; parentKeys: string[] } | null => {
+    for (const node of nodes) {
+      if (node.key === key) return { node, parentKeys };
+      if (node.children) {
+        const result = findNode(node.children, key, [...parentKeys, node.key]);
+        if (result) return result;
+      }
+    }
+    return null;
+  };
+
+  const result = findNode(treeData, selectedKey);
+  if (!result) return null;
+
+  const { node, parentKeys } = result;
+  const type = node.data?.type;
+
+  switch (type) {
+    case 'building':
+      return { buildingId: selectedKey };
+    case 'floor': {
+      const buildingId = parentKeys[0];
+      const floorId = selectedKey.substring(buildingId.length + 1);
+      return { buildingId, floorId };
+    }
+    case 'room': {
+      const buildingId = parentKeys[0];
+      const floorKey = parentKeys[1];
+      const floorId = floorKey.substring(buildingId.length + 1);
+      const roomId = selectedKey.substring(floorKey.length + 1);
+      return { buildingId, floorId, roomId };
+    }
+    case 'item': {
+      const buildingId = parentKeys[0];
+      const floorKey = parentKeys[1];
+      const roomKey = parentKeys[2];
+      const floorId = floorKey.substring(buildingId.length + 1);
+      const roomId = roomKey.substring(floorKey.length + 1);
+      const inspectionItemId = selectedKey.substring(roomKey.length + 1);
+      return { buildingId, floorId, roomId, inspectionItemId };
+    }
+    default:
+      return null;
+  }
+};
+
 const ImportVerifyPage: React.FC = () => {
   const { treeData, statistics, points } = useDataStore();
   const { previewData, processedPoints, importResult, resetImport } =
@@ -47,12 +104,42 @@ const ImportVerifyPage: React.FC = () => {
     statusFilter,
     abnormalFilter,
     searchText,
+    treeFilter,
     setSelectedKeys,
     setStatusFilter,
     setAbnormalFilter,
     setSearchText,
+    setTreeFilter,
     resetFilters,
   } = useFilterStore();
+
+  const computedTreeFilter = useMemo(
+    () => parseTreeFilter(selectedKeys, treeData),
+    [selectedKeys, treeData]
+  );
+
+  useEffect(() => {
+    setTreeFilter(computedTreeFilter);
+  }, [computedTreeFilter, setTreeFilter]);
+
+  const filteredPoints = useMemo(() => {
+    if (!treeFilter) return points;
+    return points.filter((p) => {
+      if (treeFilter.buildingId && p.buildingId !== treeFilter.buildingId) return false;
+      if (treeFilter.floorId && p.floorId !== treeFilter.floorId) return false;
+      if (treeFilter.roomId && p.roomId !== treeFilter.roomId) return false;
+      if (treeFilter.inspectionItemId && p.inspectionItemId !== treeFilter.inspectionItemId) return false;
+      return true;
+    });
+  }, [points, treeFilter]);
+
+  const filteredStatistics = useMemo(() => ({
+    total: filteredPoints.length,
+    abnormal: filteredPoints.filter((p) => p.isAbnormal).length,
+    missingPhoto: filteredPoints.filter((p) => !p.hasPhoto).length,
+    duplicate: filteredPoints.filter((p) => p.isDuplicate).length,
+    pending: filteredPoints.filter((p) => p.status === 'pending').length,
+  }), [filteredPoints]);
 
   const stepOrder = ['upload', 'mapping', 'processed', 'list'];
   const [step, setStep] = useState<'upload' | 'mapping' | 'processed' | 'list'>(
@@ -246,7 +333,7 @@ const ImportVerifyPage: React.FC = () => {
               <Title level={4} className="!m-0">
                 导入校对
               </Title>
-              <Tag color="blue">共 {statistics.total} 条数据</Tag>
+              <Tag color="blue">共 {filteredStatistics.total} 条数据</Tag>
             </div>
             <Space>
               <Button icon={<Download size={14} />} onClick={handleExportAll}>
@@ -267,7 +354,7 @@ const ImportVerifyPage: React.FC = () => {
               <Card className="!bg-red-50 !border-red-200">
                 <Statistic
                   title="异常值"
-                  value={statistics.abnormal}
+                  value={filteredStatistics.abnormal}
                   prefix={<AlertTriangle className="text-red-500" size={18} />}
                   valueStyle={{ color: '#DC2626' }}
                 />
@@ -277,7 +364,7 @@ const ImportVerifyPage: React.FC = () => {
               <Card className="!bg-orange-50 !border-orange-200">
                 <Statistic
                   title="缺失照片"
-                  value={statistics.missingPhoto}
+                  value={filteredStatistics.missingPhoto}
                   prefix={<ImageIcon className="text-orange-500" size={18} />}
                   valueStyle={{ color: '#D97706' }}
                 />
@@ -287,7 +374,7 @@ const ImportVerifyPage: React.FC = () => {
               <Card className="!bg-yellow-50 !border-yellow-200">
                 <Statistic
                   title="重复点位"
-                  value={statistics.duplicate}
+                  value={filteredStatistics.duplicate}
                   prefix={<FileWarning className="text-yellow-600" size={18} />}
                   valueStyle={{ color: '#CA8A04' }}
                 />
@@ -297,7 +384,7 @@ const ImportVerifyPage: React.FC = () => {
               <Card className="!bg-blue-50 !border-blue-200">
                 <Statistic
                   title="待校对"
-                  value={statistics.pending}
+                  value={filteredStatistics.pending}
                   prefix={<Clock className="text-blue-500" size={18} />}
                   valueStyle={{ color: '#2563EB' }}
                 />
