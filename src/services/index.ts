@@ -113,7 +113,7 @@ export const dataService = {
         buildingMap.set(point.buildingId, {
           key: point.buildingId,
           title: point.buildingName,
-          data: { type: 'building', count: 0 },
+          data: { type: 'building', count: 0, buildingId: point.buildingId },
           children: [],
         });
       }
@@ -126,7 +126,7 @@ export const dataService = {
         floorMap.set(floorKey, {
           key: floorKey,
           title: point.floorName,
-          data: { type: 'floor', count: 0 },
+          data: { type: 'floor', count: 0, buildingId: point.buildingId, floorId: point.floorId },
           children: [],
         });
         buildingNode.children!.push(floorMap.get(floorKey)!);
@@ -140,7 +140,7 @@ export const dataService = {
         roomMap.set(roomKey, {
           key: roomKey,
           title: `${point.roomNumber}室`,
-          data: { type: 'room', count: 0 },
+          data: { type: 'room', count: 0, buildingId: point.buildingId, floorId: point.floorId, roomId: point.roomId },
           children: [],
         });
         floorNode.children!.push(roomMap.get(roomKey)!);
@@ -154,7 +154,7 @@ export const dataService = {
         itemMap.set(itemKey, {
           key: itemKey,
           title: point.inspectionItemName,
-          data: { type: 'item', count: 0 },
+          data: { type: 'item', count: 0, buildingId: point.buildingId, floorId: point.floorId, roomId: point.roomId, inspectionItemId: point.inspectionItemId },
         });
         roomNode.children!.push(itemMap.get(itemKey)!);
       }

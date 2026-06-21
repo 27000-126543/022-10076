@@ -102,6 +102,10 @@ export interface TreeNode {
   data?: {
     type: 'building' | 'floor' | 'room' | 'item';
     count?: number;
+    buildingId?: string;
+    floorId?: string;
+    roomId?: string;
+    inspectionItemId?: string;
   };
 }
 

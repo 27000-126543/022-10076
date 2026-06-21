@@ -46,16 +46,14 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
   const {
     processedPoints,
     isImporting,
-    importProgress,
-    importResult,
     importData,
     resetImport,
   } = useImportStore();
 
-  const { approvePoint, createRetestTask, updatePoint, deletePoint } =
+  const { points, approvePoint, createRetestTask, updatePoint, deletePoint } =
     useDataStore();
 
-  const { selectedKeys, statusFilter, abnormalFilter, searchText, treeFilter } =
+  const { statusFilter, abnormalFilter, searchText, treeFilter } =
     useFilterStore();
 
   const [retestModalOpen, setRetestModalOpen] = useState(false);
@@ -66,26 +64,26 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
   const [form] = Form.useForm();
 
   const displayPoints = useMemo(() => {
-    let points = showOnlyProcessed ? processedPoints : useDataStore.getState().points;
+    let result = showOnlyProcessed ? processedPoints : points;
 
     if (treeFilter) {
       if (treeFilter.buildingId) {
-        points = points.filter((p) => p.buildingId === treeFilter.buildingId);
+        result = result.filter((p) => p.buildingId === treeFilter.buildingId);
       }
       if (treeFilter.floorId) {
-        points = points.filter((p) => p.floorId === treeFilter.floorId);
+        result = result.filter((p) => p.floorId === treeFilter.floorId);
       }
       if (treeFilter.roomId) {
-        points = points.filter((p) => p.roomId === treeFilter.roomId);
+        result = result.filter((p) => p.roomId === treeFilter.roomId);
       }
       if (treeFilter.inspectionItemId) {
-        points = points.filter((p) => p.inspectionItemId === treeFilter.inspectionItemId);
+        result = result.filter((p) => p.inspectionItemId === treeFilter.inspectionItemId);
       }
     }
 
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
-      points = points.filter(
+      result = result.filter(
         (p) =>
           p.pointNumber.toLowerCase().includes(lowerSearch) ||
           p.roomNumber.toLowerCase().includes(lowerSearch) ||
@@ -94,23 +92,23 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
     }
 
     if (statusFilter !== 'all') {
-      points = points.filter((p) => p.status === statusFilter);
+      result = result.filter((p) => p.status === statusFilter);
     }
 
     if (abnormalFilter === 'abnormal') {
-      points = points.filter((p) => p.isAbnormal);
+      result = result.filter((p) => p.isAbnormal);
     } else if (abnormalFilter === 'missing_photo') {
-      points = points.filter((p) => !p.hasPhoto);
+      result = result.filter((p) => !p.hasPhoto);
     } else if (abnormalFilter === 'duplicate') {
-      points = points.filter((p) => p.isDuplicate);
+      result = result.filter((p) => p.isDuplicate);
     } else if (abnormalFilter === 'normal') {
-      points = points.filter(
+      result = result.filter(
         (p) => !p.isAbnormal && p.hasPhoto && !p.isDuplicate
       );
     }
 
-    return points;
-  }, [showOnlyProcessed, processedPoints, searchText, statusFilter, abnormalFilter, treeFilter]);
+    return result;
+  }, [showOnlyProcessed, processedPoints, points, searchText, statusFilter, abnormalFilter, treeFilter]);
 
   const handleApprove = async (point: MeasurementPoint) => {
     await approvePoint(point.id);
@@ -160,18 +158,12 @@ const ProcessedDataTable: React.FC<ProcessedDataTableProps> = ({
     if (!selectedPoint) return;
 
     const measuredValue = Number(values.measuredValue);
-    const deviation = Math.round((measuredValue - selectedPoint.designValue) * 100) / 100;
-    const isAbnormal =
-      deviation > selectedPoint.allowablePositiveDeviation ||
-      deviation < -selectedPoint.allowableNegativeDeviation;
 
     await updatePoint(selectedPoint.id, {
       measuredValue,
       checker: values.checker,
       checkDate: values.checkDate ? values.checkDate.format('YYYY-MM-DD') : '',
       remark: values.remark,
-      deviation,
-      isAbnormal,
     });
     message.success('已更新测点数据');
     setEditModalOpen(false);

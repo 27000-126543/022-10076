@@ -11,7 +11,6 @@ import {
   Statistic,
   Row,
   Col,
-  Divider,
 } from 'antd';
 import {
   Search,
@@ -30,7 +29,7 @@ import type { TreeProps } from 'antd';
 import FileUploadArea from '../components/import/FileUploadArea';
 import ColumnMappingTable from '../components/import/ColumnMappingTable';
 import ProcessedDataTable from '../components/import/ProcessedDataTable';
-import { useDataStore, useImportStore, useFilterStore } from '../store';
+import { useDataStore, useImportStore, useFilterStore, type TreeFilter } from '../store';
 import { exportMeasurementPoints } from '../utils/excel';
 import type { TreeNode } from '../types';
 
@@ -41,62 +40,36 @@ const { Option } = Select;
 const parseTreeFilter = (
   selectedKeys: string[],
   treeData: TreeNode[]
-): { buildingId?: string; floorId?: string; roomId?: string; inspectionItemId?: string } | null => {
+): TreeFilter | null => {
   if (selectedKeys.length === 0) return null;
   const selectedKey = selectedKeys[0];
 
-  const findNode = (
-    nodes: TreeNode[],
-    key: string,
-    parentKeys: string[] = []
-  ): { node: TreeNode; parentKeys: string[] } | null => {
+  const findNode = (nodes: TreeNode[], key: string): TreeNode | null => {
     for (const node of nodes) {
-      if (node.key === key) return { node, parentKeys };
+      if (node.key === key) return node;
       if (node.children) {
-        const result = findNode(node.children, key, [...parentKeys, node.key]);
+        const result = findNode(node.children, key);
         if (result) return result;
       }
     }
     return null;
   };
 
-  const result = findNode(treeData, selectedKey);
-  if (!result) return null;
+  const node = findNode(treeData, selectedKey);
+  if (!node?.data) return null;
 
-  const { node, parentKeys } = result;
-  const type = node.data?.type;
+  const { buildingId, floorId, roomId, inspectionItemId } = node.data;
+  const filter: TreeFilter = {};
+  if (buildingId) filter.buildingId = buildingId;
+  if (floorId) filter.floorId = floorId;
+  if (roomId) filter.roomId = roomId;
+  if (inspectionItemId) filter.inspectionItemId = inspectionItemId;
 
-  switch (type) {
-    case 'building':
-      return { buildingId: selectedKey };
-    case 'floor': {
-      const buildingId = parentKeys[0];
-      const floorId = selectedKey.substring(buildingId.length + 1);
-      return { buildingId, floorId };
-    }
-    case 'room': {
-      const buildingId = parentKeys[0];
-      const floorKey = parentKeys[1];
-      const floorId = floorKey.substring(buildingId.length + 1);
-      const roomId = selectedKey.substring(floorKey.length + 1);
-      return { buildingId, floorId, roomId };
-    }
-    case 'item': {
-      const buildingId = parentKeys[0];
-      const floorKey = parentKeys[1];
-      const roomKey = parentKeys[2];
-      const floorId = floorKey.substring(buildingId.length + 1);
-      const roomId = roomKey.substring(floorKey.length + 1);
-      const inspectionItemId = selectedKey.substring(roomKey.length + 1);
-      return { buildingId, floorId, roomId, inspectionItemId };
-    }
-    default:
-      return null;
-  }
+  return Object.keys(filter).length > 0 ? filter : null;
 };
 
 const ImportVerifyPage: React.FC = () => {
-  const { treeData, statistics, points } = useDataStore();
+  const { treeData, statistics, points, fetchAllData } = useDataStore();
   const { previewData, processedPoints, importResult, resetImport } =
     useImportStore();
   const {
@@ -146,6 +119,10 @@ const ImportVerifyPage: React.FC = () => {
     'list'
   );
 
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
   const onSelect: TreeProps['onSelect'] = (selectedKeysValue) => {
     setSelectedKeys(selectedKeysValue as string[]);
   };
@@ -170,7 +147,7 @@ const ImportVerifyPage: React.FC = () => {
   const handleImportComplete = () => {
     setStep('list');
     resetImport();
-    useDataStore.getState().fetchAllData();
+    fetchAllData();
   };
 
   const renderStepIndicator = () => (
