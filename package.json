@@ -3,15 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "main": "electron/main.cjs",
+  "description": "质量实测实量离线桌面客户端",
+  "author": "Quality Measurement Team",
   "scripts": {
-    "dev": "vite",
-    "dev:electron": "concurrently -k \"vite --port 5173\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron electron/main.cjs\"",
+    "dev": "vite --port 5173 --strictPort",
+    "dev:electron": "concurrently -k \"vite --port 5173 --strictPort\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 node electron/launcher.cjs electron/main.cjs\"",
     "build": "tsc -b && vite build",
-    "build:electron": "vite build && electron-builder --win",
-    "build:electron:dir": "vite build && electron-builder --win --dir",
-    "lint": "eslint .",
+    "build:electron": "npm run build && electron-builder",
+    "build:electron:dir": "npm run build && electron-builder --dir",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit"
+    "lint": "eslint ."
   },
   "dependencies": {
     "antd": "^5.21.0",
@@ -28,63 +29,58 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.25.0",
     "@types/file-saver": "^2.0.7",
-    "@types/node": "^22.15.30",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.4.1",
-    "autoprefixer": "^10.4.21",
-    "babel-plugin-react-dev-locator": "^1.0.0",
-    "concurrently": "^9.2.3",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^29.4.6",
     "electron-builder": "^25.1.8",
-    "eslint": "^9.25.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5",
-    "vite-plugin-trae-solo-badge": "^1.0.0",
-    "vite-tsconfig-paths": "^5.1.4",
-    "wait-on": "^8.0.5"
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vite-tsconfig-paths": "^5.0.1",
+    "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.quality-measurement.app",
+    "appId": "com.quality.measurement",
     "productName": "质量实测实量系统",
     "directories": {
       "output": "release"
     },
     "files": [
-      "dist/**/*",
-      "electron/**/*"
+      "dist/**",
+      "electron/**",
+      "package.json"
     ],
-    "extraMetadata": {
-      "main": "electron/main.cjs"
-    },
+    "asar": true,
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
         }
       ],
-      "icon": "public/favicon.svg"
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerLanguages": [
-        "zh_CN"
-      ],
-      "language": 2052,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
       "shortcutName": "质量实测实量系统"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
     }
   }
 }
